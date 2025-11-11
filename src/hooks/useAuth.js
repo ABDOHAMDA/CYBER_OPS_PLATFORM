@@ -8,18 +8,37 @@ export const useAuth = () => {
     console.log("Authentication successful!", userData);
     setIsLoggedIn(true);
     setCurrentUser(userData);
+
+    // Store user in localStorage for persistence
+    localStorage.setItem("cyberops_user", JSON.stringify(userData));
   };
 
   const handleRegister = (userData) => {
     console.log("Registration successful!", userData);
     setIsLoggedIn(true);
     setCurrentUser(userData);
+
+    // Store user in localStorage for persistence
+    localStorage.setItem("cyberops_user", JSON.stringify(userData));
   };
 
   const handleLogout = () => {
     console.log("Logging out operative...");
     setIsLoggedIn(false);
     setCurrentUser(null);
+
+    // Clear user from localStorage
+    localStorage.removeItem("cyberops_user");
+  };
+
+  // Check for existing session on app start
+  const checkExistingSession = () => {
+    const storedUser = localStorage.getItem("cyberops_user");
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      setIsLoggedIn(true);
+      setCurrentUser(userData);
+    }
   };
 
   return {
@@ -28,5 +47,6 @@ export const useAuth = () => {
     handleLogin,
     handleRegister,
     handleLogout,
+    checkExistingSession,
   };
 };

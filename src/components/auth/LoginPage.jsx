@@ -1,31 +1,38 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Key, Eye, EyeOff, ChevronRight, Zap, UserPlus, LogIn } from 'lucide-react';
+import { Mail, Lock, Key, Eye, EyeOff, ChevronRight, Zap, UserPlus, LogIn, HelpCircle } from 'lucide-react';
 import BinaryRain from '../ui/BinaryRain';
 
-const LoginPage = ({ onLogin, onSwitchToRegister }) => {
+const LoginPage = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Login attempted with:', email, password);
     
-    const userData = {
-      user_id: Math.floor(Math.random() * 1000) + 1,
-      username: email.split('@')[0] || 'operative',
-      email: email,
-      full_name: 'Security Operative',
-      total_points: 0,
-      profile_meta: {
-        avatar: "💀",
-        rank: "OPERATIVE",
-        specialization: "PENETRATION_TESTING"
-      }
-    };
-    
-    onLogin(userData);
+    setIsLoading(true);
+
+    // Simulate API call
+    setTimeout(() => {
+      const userData = {
+        user_id: Math.floor(Math.random() * 1000) + 1,
+        username: email.split('@')[0] || 'operative',
+        email: email,
+        full_name: 'Security Operative',
+        total_points: 0,
+        profile_meta: {
+          avatar: "💀",
+          rank: "OPERATIVE",
+          specialization: "PENETRATION_TESTING"
+        }
+      };
+      
+      setIsLoading(false);
+      onLogin(userData);
+    }, 1500);
   };
 
   return (
@@ -73,9 +80,19 @@ const LoginPage = ({ onLogin, onSwitchToRegister }) => {
               </div>
 
               <div className="relative group">
-                <label className="block text-sm font-semibold text-gray-400 mb-2 font-mono">
-                  [ACCESS_KEY]
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-semibold text-gray-400 font-mono">
+                    [ACCESS_KEY]
+                  </label>
+                  <button
+                    type="button"
+                    onClick={onForgotPassword}
+                    className="text-green-400 hover:text-green-300 font-mono text-xs transition-colors duration-200 flex items-center gap-1"
+                  >
+                    <HelpCircle className="w-3 h-3" />
+                    FORGOT_ACCESS_KEY?
+                  </button>
+                </div>
                 <div className="relative">
                   <Key className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-400" />
                   <input
@@ -100,13 +117,20 @@ const LoginPage = ({ onLogin, onSwitchToRegister }) => {
                 type="submit"
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-lg font-bold text-lg shadow-lg hover:shadow-green-500/20 transform hover:scale-105 transition-all duration-300 relative overflow-hidden border border-green-500/30"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-lg font-bold text-lg shadow-lg hover:shadow-green-500/20 transform hover:scale-105 transition-all duration-300 relative overflow-hidden border border-green-500/30 font-mono flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2 font-mono">
-                  INITIATE_SESSION
-                  <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${isHovered ? 'translate-x-1' : ''}`} />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    AUTHENTICATING...
+                  </>
+                ) : (
+                  <>
+                    INITIATE_SESSION
+                    <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${isHovered ? 'translate-x-1' : ''}`} />
+                  </>
+                )}
               </button>
             </form>
 
