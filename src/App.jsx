@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import LoginPage from './components/auth/LoginPage';
+import RegisterPage from './components/auth/RegisterPage';
 import Navbar from './components/layout/Navbar';
 import HomePage from './components/pages/HomePage';
 import Dashboard from './components/pages/Dashboard';
@@ -13,9 +14,28 @@ import { useLabs } from './hooks/useLabs';
 import './styles/animations.css';
 
 function App() {
-  const { isLoggedIn, handleLogin, handleLogout } = useAuth();
+  const { isLoggedIn, currentUser, handleLogin, handleRegister, handleLogout } = useAuth();
   const { selectedLabType, setSelectedLabType, selectedLab, selectedChallenge } = useLabs();
   const [currentPage, setCurrentPage] = useState('login');
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+
+  const renderAuthPage = () => {
+    if (authMode === 'login') {
+      return (
+        <LoginPage 
+          onLogin={handleLogin} 
+          onSwitchToRegister={() => setAuthMode('register')} 
+        />
+      );
+    } else {
+      return (
+        <RegisterPage 
+          onRegister={handleRegister} 
+          onSwitchToLogin={() => setAuthMode('login')} 
+        />
+      );
+    }
+  };
 
   const renderPage = () => {
     switch(currentPage) {
@@ -41,13 +61,14 @@ function App() {
   return (
     <div className="min-h-screen">
       {!isLoggedIn ? (
-        <LoginPage onLogin={handleLogin} />
+        renderAuthPage()
       ) : (
         <>
           <Navbar
             setCurrentPage={setCurrentPage}
             onLogout={handleLogout}
             currentPage={currentPage}
+            currentUser={currentUser}
           />
           {renderPage()}
         </>

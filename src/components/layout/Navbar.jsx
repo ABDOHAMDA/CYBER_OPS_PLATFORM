@@ -2,7 +2,7 @@ import React from 'react';
 import { Terminal, Cpu, Code, Users, Star } from 'lucide-react';
 import { navItems } from '../../data/navigationData';
 
-const Navbar = ({ setCurrentPage, onLogout, currentPage }) => {
+const Navbar = ({ setCurrentPage, onLogout, currentPage, currentUser }) => {
   const getIcon = (iconName) => {
     const icons = {
       Terminal: Terminal,
@@ -13,11 +13,22 @@ const Navbar = ({ setCurrentPage, onLogout, currentPage }) => {
     return icons[iconName] || Terminal;
   };
 
+  const getUserRank = () => {
+    return currentUser?.profile_meta?.rank || 'OPERATIVE';
+  };
+
+  const getUserPoints = () => {
+    return currentUser?.total_points || 0;
+  };
+
+  const getUserInitial = () => {
+    return currentUser?.username?.charAt(0)?.toUpperCase() || 'O';
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-lg border-b border-gray-700">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <button
             onClick={() => setCurrentPage('home')}
             className="flex items-center gap-2 text-white hover:text-green-400 transition-colors duration-200 group"
@@ -30,7 +41,6 @@ const Navbar = ({ setCurrentPage, onLogout, currentPage }) => {
             </span>
           </button>
 
-          {/* Nav Items */}
           <div className="flex items-center gap-2">
             {navItems.map((item) => {
               const IconComponent = getIcon(item.icon);
@@ -51,17 +61,16 @@ const Navbar = ({ setCurrentPage, onLogout, currentPage }) => {
             })}
           </div>
 
-          {/* User Section */}
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-2 bg-gray-800/50 px-4 py-2 rounded-lg border border-gray-600">
               <Star className="w-4 h-4 text-green-400" />
-              <span className="text-white font-semibold font-mono">450_PTS</span>
+              <span className="text-white font-semibold font-mono">{getUserPoints()}_PTS</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center text-white font-bold border border-green-500/30">
-                O
+                {getUserInitial()}
               </div>
-              <span className="hidden md:inline text-white font-medium font-mono">OPERATIVE</span>
+              <span className="hidden md:inline text-white font-medium font-mono">{getUserRank()}</span>
             </div>
             <button
               onClick={onLogout}
