@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { UserPlus, Mail, Users, ChevronRight, Shield, LogIn } from 'lucide-react';
 import BinaryRain from '../ui/BinaryRain';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const RegisterPage = ({ onRegister, onSwitchToLogin }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -18,36 +21,37 @@ const RegisterPage = ({ onRegister, onSwitchToLogin }) => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      // ✅ هنا استبدلنا المسار ليكون ثابت وواضح
-      const response = await fetch("http://localhost/graduatoin%20project/src/components/auth/send_verification.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+  try {
+    const response = await axios.post(
+      encodeURI('http://localhost/graduatoin%20project/src/components/auth/send_verification.php')
+      , formData
+      , { headers: { 'Content-Type': 'application/json' } }
+    );
 
-      const data = await response.json();
-      console.log("Server response:", data);
+    const data = response.data;
+    console.log("Server response:", data);
 
-      if (data.success) {
-        alert("✅ Verification code sent to your email.");
-        // ✅ بدلاً من window.location.href
-        // نستخدم الـ prop الجاي من App.jsx عشان نروح لصفحة التحقق
-      window.location.href = `/verify?email=${formData.email}`;
-      } else {
-        alert(data.message || "❌ Registration failed.");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("⚠️ Error connecting to server.");
-    } finally {
-      setIsLoading(false);
+    if (data.success) {
+      alert("✅ Verification code sent to your email.");
+      localStorage.setItem('userEmail', formData.email);
+      localStorage.setItem('username', formData.username);
+      localStorage.setItem('fullName', formData.fullName); 
+      navigate("/verify");
+    } else {
+      alert(data.message || "❌ Registration failed.");
     }
-  };
+  } catch (error) {
+    console.error("Error:", error);
+    alert("⚠️ Error connecting to server.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4 relative overflow-hidden">
@@ -128,7 +132,7 @@ const RegisterPage = ({ onRegister, onSwitchToLogin }) => {
                     onChange={handleChange}
                     required
                     className="w-full pl-12 pr-4 py-4 bg-gray-700/50 border-2 border-gray-600 rounded-lg text-white placeholder-gray-500 outline-none focus:border-blue-500 focus:bg-gray-700/80 transition-all duration-300 font-mono"
-                    placeholder="Ahmed Mohammed"
+                    placeholder="John Smith"
                   />
                 </div>
               </div>

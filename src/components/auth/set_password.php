@@ -1,18 +1,23 @@
 <?php
 require 'db_connect.php';
 header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 
-$input = json_decode(file_get_contents('php://input'), true);
+$data = file_get_contents('php://input');
+$input = json_decode($data, true);
 $email = isset($input['email']) ? trim($input['email']) : '';
 $password = isset($input['password']) ? $input['password'] : '';
 $fullName = isset($input['fullName']) ? trim($input['fullName']) : '';
 $username = isset($input['username']) ? trim($input['username']) : '';
 
+var_dump($email, $password, $fullName, $username);
+
 if (!$email || !$password || !$username) {
     echo json_encode(['success'=>false,'message'=>'Missing fields']);
     exit;
 }
-
 // check verification
 $stmt = $conn->prepare('SELECT id, is_verified, username FROM email_verifications WHERE email = ? ORDER BY created_at DESC LIMIT 1');
 $stmt->bind_param('s', $email);
@@ -56,4 +61,6 @@ $del->execute();
 $del->close();
 
 echo json_encode(['success'=>true,'message'=>'Account created','user_id'=>$userid]);
+exit;
+
 ?>

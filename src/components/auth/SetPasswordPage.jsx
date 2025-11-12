@@ -1,11 +1,23 @@
-import React, { useState } from 'react';
-import { Lock, Key, Eye, EyeOff, ChevronRight, Shield, Check, X } from 'lucide-react';
-import BinaryRain from '../ui/BinaryRain';
+import React, { use, useState } from "react";
+import {
+  Lock,
+  Key,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  Shield,
+  Check,
+  X,
+} from "lucide-react";
+import BinaryRain from "../ui/BinaryRain";
+import axios from "axios";
+
+
 
 const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
   const [formData, setFormData] = useState({
-    password: '',
-    confirmPassword: ''
+    password: "",
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -16,14 +28,14 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
-    
+
     // Clear errors when user types
     if (errors[e.target.name]) {
       setErrors({
         ...errors,
-        [e.target.name]: ''
+        [e.target.name]: "",
       });
     }
   };
@@ -32,55 +44,88 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
     const newErrors = {};
 
     if (formData.password.length < 8) {
-      newErrors.password = 'PASSWORD_TOO_SHORT_MIN_8_CHARACTERS';
+      newErrors.password = "PASSWORD_TOO_SHORT_MIN_8_CHARACTERS";
     }
 
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(formData.password)) {
-      newErrors.password = 'PASSWORD_REQUIRES_UPPERCASE_LOWERCASE_NUMBER_SPECIAL_CHAR';
+    if (
+      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(formData.password)
+    ) {
+      newErrors.password =
+        "PASSWORD_REQUIRES_UPPERCASE_LOWERCASE_NUMBER_SPECIAL_CHAR";
     }
 
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'PASSWORDS_DO_NOT_MATCH';
+      newErrors.confirmPassword = "PASSWORDS_DO_NOT_MATCH";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+  const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    setIsLoading(true);
+  if (!validateForm()) {
+    return;
+  }
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+  setIsLoading(true);
+
+  try {
+    const response = await axios.post(
+      "http://localhost/graduatoin%20project/src/components/auth/set_password.php",
+      {
+        email: email,
+        password: formData.password,
+        fullName: "",
+        username: "",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = response.data;
+    console.log("Server response:", data);
+
+    if (data.success) {
+      alert("✅ Password set successfully!");
       onPasswordSet(formData.password);
-    }, 1500);
-  };
+    } else {
+      alert("❌ " + (data.message || "Failed to set password"));
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    alert("⚠️ Error connecting to server.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const getPasswordStrength = (password) => {
-    if (password.length === 0) return { strength: 0, text: 'ENTER_PASSWORD', color: 'gray' };
-    if (password.length < 8) return { strength: 25, text: 'TOO_SHORT', color: 'red' };
-    
+    if (password.length === 0)
+      return { strength: 0, text: "ENTER_PASSWORD", color: "gray" };
+    if (password.length < 8)
+      return { strength: 25, text: "TOO_SHORT", color: "red" };
+
     const hasLower = /[a-z]/.test(password);
     const hasUpper = /[A-Z]/.test(password);
     const hasNumber = /\d/.test(password);
     const hasSpecial = /[@$!%*?&]/.test(password);
-    
+
     const requirements = [hasLower, hasUpper, hasNumber, hasSpecial];
     const metCount = requirements.filter(Boolean).length;
-    
-    if (metCount === 1) return { strength: 25, text: 'WEAK', color: 'red' };
-    if (metCount === 2) return { strength: 50, text: 'FAIR', color: 'yellow' };
-    if (metCount === 3) return { strength: 75, text: 'GOOD', color: 'blue' };
-    if (metCount === 4) return { strength: 100, text: 'STRONG', color: 'green' };
-    
-    return { strength: 0, text: 'WEAK', color: 'red' };
+
+    if (metCount === 1) return { strength: 25, text: "WEAK", color: "red" };
+    if (metCount === 2) return { strength: 50, text: "FAIR", color: "yellow" };
+    if (metCount === 3) return { strength: 75, text: "GOOD", color: "blue" };
+    if (metCount === 4)
+      return { strength: 100, text: "STRONG", color: "green" };
+
+    return { strength: 0, text: "WEAK", color: "red" };
   };
 
   const passwordStrength = getPasswordStrength(formData.password);
@@ -88,7 +133,7 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4 relative overflow-hidden">
       <BinaryRain />
-      
+
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-500/10 via-gray-900 to-black"></div>
       <div className="absolute top-0 left-0 w-full h-1 bg-indigo-400 animate-pulse"></div>
 
@@ -100,15 +145,23 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
               <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-500/20 backdrop-blur-sm rounded-full mb-4 border border-indigo-500/30 mx-auto">
                 <Shield className="w-10 h-10 text-indigo-400" />
               </div>
-              <h1 className="text-3xl font-bold text-indigo-400 mb-2 font-mono">SECURE_ACCESS</h1>
-              <p className="text-gray-400 font-mono text-sm">ENCRYPTION_KEY_SETUP</p>
+              <h1 className="text-3xl font-bold text-indigo-400 mb-2 font-mono">
+                SECURE_ACCESS
+              </h1>
+              <p className="text-gray-400 font-mono text-sm">
+                ENCRYPTION_KEY_SETUP
+              </p>
             </div>
           </div>
 
           <div className="p-8">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2 font-mono">SET_ENCRYPTION_KEY</h2>
-              <p className="text-gray-400 font-mono text-center">OPERATIVE: {email}</p>
+              <h2 className="text-2xl font-bold text-white mb-2 font-mono">
+                SET_ENCRYPTION_KEY
+              </h2>
+              <p className="text-gray-400 font-mono text-center">
+                OPERATIVE: {email}
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -133,10 +186,14 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 text-indigo-400 hover:text-indigo-300 transition"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
-                
+
                 {/* Password Strength Indicator */}
                 {formData.password && (
                   <div className="mt-2">
@@ -147,22 +204,25 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
                     <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
-                          passwordStrength.color === 'red' ? 'bg-red-500' :
-                          passwordStrength.color === 'yellow' ? 'bg-yellow-500' :
-                          passwordStrength.color === 'blue' ? 'bg-blue-500' : 'bg-green-500'
+                          passwordStrength.color === "red"
+                            ? "bg-red-500"
+                            : passwordStrength.color === "yellow"
+                            ? "bg-yellow-500"
+                            : passwordStrength.color === "blue"
+                            ? "bg-blue-500"
+                            : "bg-green-500"
                         }`}
                         style={{ width: `${passwordStrength.strength}%` }}
                       ></div>
                     </div>
                   </div>
                 )}
-                
+
                 {errors.password && (
                   <div className=" items-center gap-2 text-red-400 font-mono text-sm mt-2 break-words">
-  <X className="w-4 h-4" />
-  <span className="text-left">{errors.password}</span>
-</div>
-
+                    <X className="w-4 h-4" />
+                    <span className="text-left">{errors.password}</span>
+                  </div>
                 )}
               </div>
 
@@ -187,10 +247,14 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 text-indigo-400 hover:text-indigo-300 transition"
                   >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
-                
+
                 {errors.confirmPassword && (
                   <div className="flex items-center gap-2 text-red-400 font-mono text-sm mt-2">
                     <X className="w-4 h-4" />
@@ -201,27 +265,61 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
 
               {/* Password Requirements */}
               <div className="bg-gray-700/30 rounded-lg p-4 border border-gray-600">
-                <h3 className="text-green-400 font-mono text-sm mb-2 text-left">SECURITY_REQUIREMENTS:</h3>
+                <h3 className="text-green-400 font-mono text-sm mb-2 text-left">
+                  SECURITY_REQUIREMENTS:
+                </h3>
                 <div className="space-y-1 text-xs text-gray-400 font-mono">
                   <div className="flex items-center gap-2">
-                    <Check className={`w-3 h-3 ${formData.password.length >= 8 ? 'text-green-400' : 'text-gray-500'}`} />
+                    <Check
+                      className={`w-3 h-3 ${
+                        formData.password.length >= 8
+                          ? "text-green-400"
+                          : "text-gray-500"
+                      }`}
+                    />
                     <span className="text-left">MINIMUM_8_CHARACTERS</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Check className={`w-3 h-3 ${/(?=.*[a-z])/.test(formData.password) ? 'text-green-400' : 'text-gray-500'}`} />
+                    <Check
+                      className={`w-3 h-3 ${
+                        /(?=.*[a-z])/.test(formData.password)
+                          ? "text-green-400"
+                          : "text-gray-500"
+                      }`}
+                    />
                     <span className="text-left">LOWERCASE_LETTER</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Check className={`w-3 h-3 ${/(?=.*[A-Z])/.test(formData.password) ? 'text-green-400' : 'text-gray-500'}`} />
+                    <Check
+                      className={`w-3 h-3 ${
+                        /(?=.*[A-Z])/.test(formData.password)
+                          ? "text-green-400"
+                          : "text-gray-500"
+                      }`}
+                    />
                     <span className="text-left">UPPERCASE_LETTER</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Check className={`w-3 h-3 ${/\d/.test(formData.password) ? 'text-green-400' : 'text-gray-500'}`} />
+                    <Check
+                      className={`w-3 h-3 ${
+                        /\d/.test(formData.password)
+                          ? "text-green-400"
+                          : "text-gray-500"
+                      }`}
+                    />
                     <span className="text-left">NUMERIC_CHARACTER</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Check className={`w-3 h-3 ${/[@$!%*?&]/.test(formData.password) ? 'text-green-400' : 'text-gray-500'}`} />
-                    <span className="text-left">SPECIAL_CHARACTER (@$!%*?&)</span>
+                    <Check
+                      className={`w-3 h-3 ${
+                        /[@$!%*?&]/.test(formData.password)
+                          ? "text-green-400"
+                          : "text-gray-500"
+                      }`}
+                    />
+                    <span className="text-left">
+                      SPECIAL_CHARACTER (@$!%*?&)
+                    </span>
                   </div>
                 </div>
               </div>
@@ -241,7 +339,11 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
                 ) : (
                   <>
                     ACTIVATE_OPERATIVE
-                    <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${isHovered ? 'translate-x-1' : ''}`} />
+                    <ChevronRight
+                      className={`w-5 h-5 transition-transform duration-300 ${
+                        isHovered ? "translate-x-1" : ""
+                      }`}
+                    />
                   </>
                 )}
               </button>

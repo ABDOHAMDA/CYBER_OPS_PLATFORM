@@ -1,3 +1,4 @@
+
 <?php
 require 'db_connect.php';
 header("Access-Control-Allow-Origin: *");
@@ -10,14 +11,31 @@ use PHPMailer\PHPMailer\Exception;
 
 require __DIR__ . '/vendor/autoload.php';
 
-$input = json_decode(file_get_contents('php://input'), true);
+$data = file_get_contents('php://input');
+$input = json_decode($data, true);
+
 $username = isset($input['username']) ? trim($input['username']) : '';
 $email = isset($input['email']) ? trim($input['email']) : '';
+$fullName = isset($input['fullName']) ? trim($input['fullName']) : '';
 
-if (!$username || !$email) {
-    echo json_encode(['success' => false, 'message' => 'Missing username or email']);
+var_dump($username, $email, $fullName);
+
+if(empty($username) || empty($email) || empty($fullName)){
+    echo json_encode(['success' => false, 'message' => 'Missing required fields']);
     exit;
 }
+else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid email format']);
+        exit;
+    }
+    else if (!preg_match("/^[a-zA-Z0-9_]{3,20}$/", $username)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid username format']);
+        exit;
+    }else if (strlen($fullName) < 3 || strlen($fullName) > 50) {
+        echo json_encode(['success' => false, 'message' => 'Full name must be between 3 and 50 characters']);
+        exit;
+    }
+
 
 // Generate 6-digit numeric code
 $code = str_pad(strval(rand(0, 999999)), 6, '0', STR_PAD_LEFT);
@@ -53,7 +71,9 @@ try {
 
     $mail->send();
     echo json_encode(['success'=>true, 'message'=>'Verification code sent successfully']);
+    exit;
 } catch (Exception $e) {
     echo json_encode(['success'=>false, 'message'=>'Mailer error: '.$mail->ErrorInfo]);
 }
+
 ?>

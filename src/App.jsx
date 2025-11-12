@@ -24,10 +24,7 @@ import "./styles/animations.css";
 function AppContent() {
   const { isLoggedIn, currentUser, handleLogin, handleRegister, handleLogout } =
     useAuth();
-  const {
-    selectedLabType,
-    setSelectedLabType,
-  } = useLabs();
+  const { selectedLabType, setSelectedLabType } = useLabs();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,7 +33,7 @@ function AppContent() {
   const [pendingUser, setPendingUser] = useState(null);
   const [verificationEmail, setVerificationEmail] = useState("");
 
-  // 📍 مراقبة المسار الحالي لتحديد صفحة الأوث
+  // 📍 تحديد الصفحة الحالية بناءً على المسار
   useEffect(() => {
     const path = location.pathname;
     if (path === "/register") setAuthMode("register");
@@ -46,20 +43,32 @@ function AppContent() {
     else setAuthMode("login");
   }, [location]);
 
-  // 🚀 بدء عملية التسجيل
+  // ✅ استرجاع الإيميل من sessionStorage لو الصفحة اتعملها refresh
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem("verificationEmail");
+    if (savedEmail && !verificationEmail) {
+      setVerificationEmail(savedEmail);
+    }
+  }, [verificationEmail]);
+
+  // 🚀 بدء التسجيل
   const handleRegisterStart = async (userData) => {
     try {
-      const response = await fetch("http://localhost/api/register.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
-      });
+      const response = await fetch(
+        "http://localhost/graduatoin%20project/src/components/auth/send_verification.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(userData),
+        }
+      );
       const data = await response.json();
 
       if (data.success) {
         alert("✅ Verification code sent to your email.");
         setPendingUser(userData);
         setVerificationEmail(userData.email);
+        sessionStorage.setItem("verificationEmail", userData.email); // حفظ الإيميل مؤقتًا
         navigate("/verify");
       } else {
         alert(data.message || "❌ Registration failed.");
@@ -141,7 +150,7 @@ function AppContent() {
       case "verification":
         return (
           <EmailVerificationPage
-            email={verificationEmail}
+            email={verificationEmail || sessionStorage.getItem("verificationEmail")}
             onVerificationComplete={handleVerificationComplete}
             onResendCode={handleResendCode}
           />
@@ -149,17 +158,13 @@ function AppContent() {
       case "setPassword":
         return (
           <SetPasswordPage
-            email={verificationEmail}
+            email={verificationEmail || sessionStorage.getItem("verificationEmail")}
             onPasswordSet={handlePasswordSet}
             onBackToVerification={handleBackToVerification}
           />
         );
       case "forgotPassword":
-        return (
-          <ForgotPasswordPage
-            onBackToLogin={handleBackToLogin}
-          />
-        );
+        return <ForgotPasswordPage onBackToLogin={handleBackToLogin} />;
       default:
         return (
           <LoginPage
