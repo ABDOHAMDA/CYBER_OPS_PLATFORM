@@ -87,30 +87,21 @@ function AppContent() {
     alert("📧 Verification code re-sent to " + verificationEmail);
   };
 
-  const handlePasswordSet = async (password) => {
-    const completeUser = {
-      ...pendingUser,
-      password,
-    };
-
-    try {
-      const response = await fetch("http://localhost/api/set_password.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(completeUser),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert("✅ Account created successfully!");
-        handleRegister(completeUser);
-        navigate("/");
-      } else {
-        alert(data.message || "❌ Password setup failed.");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("⚠️ Error connecting to server.");
+  // 🔐 بعد تعيين الباسورد
+  const handlePasswordSet = (userData) => {
+    // Password is already set in the database by SetPasswordPage
+    // userData contains the complete user information from the server response
+    if (userData && userData.user_id) {
+      console.log("Account created successfully!", userData);
+      // Clear pending user state
+      setPendingUser(null);
+      sessionStorage.removeItem("verificationEmail");
+      alert("✅ Account created successfully! Please log in with your credentials.");
+      navigate("/");
+    } else {
+      console.error("Invalid user data received:", userData);
+      alert("⚠️ Account created but there was an error. Please try logging in manually.");
+      navigate("/");
     }
   };
 

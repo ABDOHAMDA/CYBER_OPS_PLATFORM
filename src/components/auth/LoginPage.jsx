@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Key, Eye, EyeOff, ChevronRight, Zap, UserPlus, LogIn, HelpCircle } from 'lucide-react';
+import { Mail, Lock, Key, Eye, EyeOff, ChevronRight, Zap, UserPlus, LogIn, HelpCircle, X } from 'lucide-react';
 import BinaryRain from '../ui/BinaryRain';
+import axios from 'axios';
 
 const LoginPage = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
   const [email, setEmail] = useState('');
@@ -8,31 +9,48 @@ const LoginPage = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login attempted with:', email, password);
-    
+    setError('');
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      const userData = {
-        user_id: Math.floor(Math.random() * 1000) + 1,
-        username: email.split('@')[0] || 'operative',
-        email: email,
-        full_name: 'Security Operative',
-        total_points: 0,
-        profile_meta: {
-          avatar: "💀",
-          rank: "OPERATIVE",
-          specialization: "PENETRATION_TESTING"
+    try {
+      const response = await axios.post(
+        'http://localhost/graduatoin%20project/src/components/auth/login.php',
+        {
+          email: email,
+          password: password
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
-      };
-      
+      );
+
+      const data = response.data;
+      console.log("Login response:", data);
+
+      if (data && data.success && data.user) {
+        onLogin(data.user);
+      } else {
+        const errorMessage = data?.message || "Login failed. Please check your credentials.";
+        setError(errorMessage);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      if (error.response && error.response.data) {
+        const errorData = error.response.data;
+        const errorMessage = errorData.message || JSON.stringify(errorData);
+        setError(errorMessage);
+      } else {
+        setError("Error connecting to server. Please try again.");
+      }
+    } finally {
       setIsLoading(false);
-      onLogin(userData);
-    }, 1500);
+    }
   };
 
   return (
@@ -71,7 +89,10 @@ const LoginPage = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (error) setError('');
+                    }}
                     required
                     className="w-full pl-12 pr-4 py-4 bg-gray-700/50 border-2 border-gray-600 rounded-lg text-white placeholder-gray-500 outline-none focus:border-green-500 focus:bg-gray-700/80 transition-all duration-300 font-mono"
                     placeholder="user@domain.com"
@@ -98,7 +119,10 @@ const LoginPage = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (error) setError('');
+                    }}
                     required
                     className="w-full pl-12 pr-12 py-4 bg-gray-700/50 border-2 border-gray-600 rounded-lg text-white placeholder-gray-500 outline-none focus:border-green-500 focus:bg-gray-700/80 transition-all duration-300 font-mono"
                     placeholder="********"
@@ -112,6 +136,13 @@ const LoginPage = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
                   </button>
                 </div>
               </div>
+
+              {error && (
+                <div className="flex items-center gap-2 text-red-400 font-mono text-sm bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                  <X className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-left break-words">{error}</span>
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -144,13 +175,6 @@ const LoginPage = ({ onLogin, onSwitchToRegister, onForgotPassword }) => {
               </button>
             </div>
 
-            <div className="mt-6 bg-gray-700/50 backdrop-blur-sm border border-green-500/30 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Zap className="w-4 h-4 text-green-400" />
-                <p className="font-semibold text-white text-sm font-mono">DEBUG_MODE</p>
-              </div>
-              <p className="text-gray-400 text-xs font-mono">ANY_CREDENTIALS_ACCEPTED_FOR_DEMO</p>
-            </div>
           </div>
         </div>
       </div>

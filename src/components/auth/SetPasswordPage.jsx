@@ -15,6 +15,11 @@ import axios from "axios";
 
 
 const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
+  // Retrieve registration data from localStorage
+  const userEmail = email || localStorage.getItem('userEmail') || '';
+  const username = localStorage.getItem('username') || '';
+  const fullName = localStorage.getItem('fullName') || '';
+
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
@@ -71,15 +76,26 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
 
   setIsLoading(true);
 
+  // Debug: Log what we're sending
+  const requestData = {
+    email: userEmail,
+    password: formData.password,
+    fullName: fullName,
+    username: username,
+  };
+  console.log("Sending password set request:", { ...requestData, password: '***' });
+
+  // Validate that we have all required data
+  if (!userEmail || !username || !fullName) {
+    alert("❌ Missing registration data. Please start the registration process again.");
+    setIsLoading(false);
+    return;
+  }
+
   try {
     const response = await axios.post(
       "http://localhost/graduatoin%20project/src/components/auth/set_password.php",
-      {
-        email: email,
-        password: formData.password,
-        fullName: "",
-        username: "",
-      },
+      requestData,
       {
         headers: {
           "Content-Type": "application/json",
@@ -90,15 +106,43 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
     const data = response.data;
     console.log("Server response:", data);
 
-    if (data.success) {
-      alert("✅ Password set successfully!");
-      onPasswordSet(formData.password);
+    if (data && data.success) {
+      // Pass the complete response data including user_id
+      const userData = {
+        user_id: data.user_id,
+        username: username,
+        email: userEmail,
+        full_name: fullName,
+        total_points: 0,
+        profile_meta: {
+          avatar: "🆕",
+          rank: "RECRUIT",
+          specialization: "TRAINING",
+          join_date: new Date().toISOString()
+        }
+      };
+      
+      // Clear registration data from localStorage after successful password set
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('username');
+      localStorage.removeItem('fullName');
+      
+      // Pass user data instead of just password - no alert here, will show in handlePasswordSet
+      onPasswordSet(userData);
     } else {
-      alert("❌ " + (data.message || "Failed to set password"));
+      const errorMessage = data?.message || response.data || "Failed to set password";
+      alert("❌ " + errorMessage);
+      console.error("Password set error:", data);
     }
   } catch (error) {
     console.error("Error:", error);
-    alert("⚠️ Error connecting to server.");
+    if (error.response && error.response.data) {
+      const errorData = error.response.data;
+      const errorMessage = errorData.message || JSON.stringify(errorData);
+      alert("⚠️ " + errorMessage);
+    } else {
+      alert("⚠️ Error connecting to server: " + (error.message || "Network error"));
+    }
   } finally {
     setIsLoading(false);
   }
@@ -160,7 +204,7 @@ const SetPasswordPage = ({ email, onPasswordSet, onBackToVerification }) => {
                 SET_ENCRYPTION_KEY
               </h2>
               <p className="text-gray-400 font-mono text-center">
-                OPERATIVE: {email}
+                OPERATIVE: {userEmail}
               </p>
             </div>
 

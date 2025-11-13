@@ -27,26 +27,34 @@ const handleSubmit = async (e) => {
 
   try {
     const response = await axios.post(
-      encodeURI('http://localhost/graduatoin%20project/src/components/auth/send_verification.php')
-      , formData
-      , { headers: { 'Content-Type': 'application/json' } }
+      'http://localhost/graduatoin%20project/src/components/auth/send_verification.php',
+      formData,
+      { headers: { 'Content-Type': 'application/json' } }
     );
 
     const data = response.data;
     console.log("Server response:", data);
 
-    if (data.success) {
+    if (data && data.success) {
       alert("✅ Verification code sent to your email.");
       localStorage.setItem('userEmail', formData.email);
       localStorage.setItem('username', formData.username);
       localStorage.setItem('fullName', formData.fullName); 
       navigate("/verify");
     } else {
-      alert(data.message || "❌ Registration failed.");
+      const errorMessage = data?.message || response.data || "❌ Registration failed.";
+      alert(errorMessage);
+      console.error("Registration error:", data);
     }
   } catch (error) {
     console.error("Error:", error);
-    alert("⚠️ Error connecting to server.");
+    if (error.response && error.response.data) {
+      const errorData = error.response.data;
+      const errorMessage = errorData.message || JSON.stringify(errorData);
+      alert("⚠️ " + errorMessage);
+    } else {
+      alert("⚠️ Error connecting to server: " + (error.message || "Network error"));
+    }
   } finally {
     setIsLoading(false);
   }
