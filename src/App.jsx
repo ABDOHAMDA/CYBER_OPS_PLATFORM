@@ -1,0 +1,415 @@
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import LoginPage from "./components/auth/LoginPage";
+import RegisterPage from "./components/auth/RegisterPage";
+import EmailVerificationPage from "./components/auth/EmailVerificationPage";
+import SetPasswordPage from "./components/auth/SetPasswordPage";
+import ForgotPasswordPage from "./components/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./components/auth/ResetPasswordPage";
+import ChangePasswordPage from "./components/auth/ChangePasswordPage";
+import Navbar from "./components/layout/Navbar";
+import HomePage from "./components/pages/HomePage";
+import Dashboard from "./components/pages/Dashboard";
+import TrainingSelectionPage from "./components/pages/TrainingSelectionPage";
+import LabsPage from "./components/pages/LabsPage";
+import LabDetailPage from "./components/pages/LabDetailPage";
+import ChallengePage from "./components/pages/ChallengePage";
+import CommentsPage from "./components/pages/CommentsPage";
+import ProfilePage from "./components/pages/ProfilePage";
+import AdminDashboardPage from "./components/pages/AdminDashboardPage";
+import axios from "axios";
+import { useAuth } from "./hooks/useAuth";
+import { useLabs } from "./hooks/useLabs";
+import "./styles/animations.css";
+
+const API_BASE = "http://localhost/graduatoin_project/server/api";
+
+function AppContent() {
+  const { isLoggedIn, currentUser, handleLogin, handleRegister, handleLogout } =
+    useAuth();
+  const { selectedLabType, setSelectedLabType } = useLabs();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [authMode, setAuthMode] = useState("login");
+  const [pendingUser, setPendingUser] = useState(null);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  const [roleRequestStatus, setRoleRequestStatus] = useState(null);
+  const [roleRequestLoading, setRoleRequestLoading] = useState(false);
+  const [roleRequestMessage, setRoleRequestMessage] = useState("");
+  const [pendingRoleRequests, setPendingRoleRequests] = useState([]);
+  const [adminStats, setAdminStats] = useState(null);
+
+  useEffect(() => {
+    if (!authMode) {
+      setAuthMode("login");
+    }
+    const path = location.pathname;
+    // For authenticated routes, don't change authMode
+    if (isLoggedIn && (path === "/change-password" || path === "/profile")) {
+      return;
+    }
+    if (path === "/register") setAuthMode("register");
+    else if (path === "/verify") setAuthMode("verification");
+    else if (path === "/set-password") setAuthMode("setPassword");
+    else if (path === "/forgot-password") setAuthMode("forgotPassword");
+    else if (path === "/reset-password") setAuthMode("resetPassword");
+    else setAuthMode("login");
+  }, [location, isLoggedIn]);
+
+  useEffect(() => {
+    const savedEmail = sessionStorage.getItem("verificationEmail");
+    if (savedEmail && !verificationEmail) {
+      setVerificationEmail(savedEmail);
+    }
+  }, [verificationEmail]);
+
+  useEffect(() => {
+    if (currentUser?.user_id) {
+      fetchRoleRequestStatus(currentUser.user_id);
+    } else {
+      setRoleRequestStatus(null);
+      setRoleRequestMessage("");
+    }
+  }, [currentUser]);
+
+  const handleRegisterStart = async (userData) => {
+    try {
+      const response = await fetch(
+        "http://localhost/graduatoin%20project/src/components/auth/send_verification.php",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(userData),
+        }
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        alert("✅ Verification code sent to your email.");
+        setPendingUser(userData);
+        setVerificationEmail(userData.email);
+        sessionStorage.setItem("verificationEmail", userData.email); // حفظ الإيميل مؤقتًا
+        navigate("/verify");
+      } else {
+        alert(data.message || "❌ Registration failed.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("⚠️ Error connecting to server.");
+    }
+  };
+
+  const handleVerificationComplete = () => {
+    navigate("/set-password");
+  };
+
+  const handleResendCode = () => {
+    alert("📧 Verification code re-sent to " + verificationEmail);
+  };
+
+  // 🔐 بعد تعيين الباسورد
+  const handlePasswordSet = (userData) => {
+    // Password is already set in the database by SetPasswordPage
+    // userData contains the complete user information from the server response
+    if (userData && userData.user_id) {
+      console.log("Account created successfully!", userData);
+      // Clear pending user state
+      setPendingUser(null);
+      sessionStorage.removeItem("verificationEmail");
+      alert("✅ Account created successfully! Please log in with your credentials.");
+      navigate("/");
+    } else {
+      console.error("Invalid user data received:", userData);
+      alert("⚠️ Account created but there was an error. Please try logging in manually.");
+      navigate("/");
+    }
+  };
+
+  const handleBackToVerification = () => navigate("/verify");
+  const handleForgotPassword = () => navigate("/forgot-password");
+  const handleBackToLogin = () => navigate("/");
+  const handleChangePassword = () => navigate("/change-password");
+  const handleProfilePasswordReset = () => navigate("/reset-password?mode=profile");
+  const handleLoginSuccess = (userData) => {
+    handleLogin(userData);
+    navigate("/home");
+  };
+  const handleLogoutWithNavigation = () => {
+    handleLogout();
+    navigate("/");
+  };
+
+  const fetchRoleRequestStatus = async (userId) => {
+    try {
+      const { data } = await axios.get(`${API_BASE}/request_role.php`, {
+        params: { user_id: userId },
+      });
+      if (data.success) {
+        setRoleRequestStatus(data.request?.status || null);
+      }
+    } catch (error) {
+      console.error("Failed to load role request status", error);
+    }
+  };
+
+  const fetchPendingRoleRequests = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE}/request_role.php`, {
+        params: { all: 1 },
+      });
+      if (data.success) {
+        setPendingRoleRequests(data.requests || []);
+        setAdminStats(data.stats || null);
+      }
+    } catch (error) {
+      console.error("Failed to load pending role requests", error);
+    }
+  };
+
+  const handleRoleRequest = async (requestedRole) => {
+    if (!currentUser?.user_id) return;
+    setRoleRequestLoading(true);
+    setRoleRequestMessage("");
+    try {
+      const { data } = await axios.post(`${API_BASE}/request_role.php`, {
+        user_id: currentUser.user_id,
+        requested_role: requestedRole,
+      });
+      if (data.success) {
+        setRoleRequestStatus(data.request?.status || "pending");
+        setRoleRequestMessage("Role request submitted for review.");
+        fetchPendingRoleRequests();
+      } else {
+        setRoleRequestMessage(data.message || "Unable to submit role request.");
+      }
+    } catch (error) {
+      setRoleRequestMessage(
+        error.response?.data?.message || "Unable to submit role request."
+      );
+    } finally {
+      setRoleRequestLoading(false);
+    }
+  };
+
+  const getUserRoles = () => {
+    if (!currentUser) return [];
+    if (Array.isArray(currentUser.roles)) {
+      return currentUser.roles;
+    }
+    if (currentUser.role) {
+      return [currentUser.role];
+    }
+    if (currentUser.profile_meta?.rank) {
+      return [currentUser.profile_meta.rank.toLowerCase()];
+    }
+    return [];
+  };
+
+  const hasRole = (roleName) => {
+    const normalized = roleName?.toLowerCase();
+    return getUserRoles()
+      .map((role) =>
+        typeof role === "string" ? role.toLowerCase() : String(role).toLowerCase()
+      )
+      .includes(normalized);
+  };
+
+  const isAdmin =
+    hasRole("admin") || currentUser?.profile_meta?.rank === "ADMIN";
+  const isInstructor =
+    hasRole("instructor") ||
+    currentUser?.profile_meta?.rank === "INSTRUCTOR";
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchPendingRoleRequests();
+    } else {
+      setPendingRoleRequests([]);
+      setAdminStats(null);
+    }
+  }, [isAdmin]);
+
+  const renderAuthPage = () => {
+    switch (authMode) {
+      case "login":
+        return (
+          <LoginPage
+            onLogin={handleLoginSuccess}
+            onSwitchToRegister={() => navigate("/register")}
+            onForgotPassword={handleForgotPassword}
+          />
+        );
+      case "register":
+        return (
+          <RegisterPage
+            onRegister={handleRegisterStart}
+            onSwitchToLogin={() => navigate("/")}
+          />
+        );
+      case "verification":
+        return (
+          <EmailVerificationPage
+            email={
+              verificationEmail || sessionStorage.getItem("verificationEmail")
+            }
+            onVerificationComplete={handleVerificationComplete}
+            onResendCode={handleResendCode}
+          />
+        );
+      case "setPassword":
+        return (
+          <SetPasswordPage
+            email={
+              verificationEmail || sessionStorage.getItem("verificationEmail")
+            }
+            onPasswordSet={handlePasswordSet}
+            onBackToVerification={handleBackToVerification}
+          />
+        );
+      case "forgotPassword":
+        return <ForgotPasswordPage onBackToLogin={handleBackToLogin} />;
+      case "resetPassword":
+        const params = new URLSearchParams(location.search);
+        const resetToken = params.get("token");
+        return (
+          <ResetPasswordPage
+            token={resetToken}
+            onBackToLogin={handleBackToLogin}
+            onResetSuccess={() => {
+              handleBackToLogin();
+            }}
+          />
+        );
+      default:
+        return (
+          <LoginPage
+            onLogin={handleLoginSuccess}
+            onSwitchToRegister={() => navigate("/register")}
+            onForgotPassword={handleForgotPassword}
+          />
+        );
+    }
+  };
+
+  const renderPage = () => {
+    const path = location.pathname;
+    const params = new URLSearchParams(location.search);
+    const routeToken = params.get("token");
+    const resetMode = params.get("mode");
+    switch (path) {
+      case "/home":
+      case "/":
+        return <HomePage setCurrentPage={(p) => navigate(`/${p}`)} />;
+      case "/dashboard":
+        return <Dashboard />;
+      case "/training":
+        return (
+          <TrainingSelectionPage
+            setCurrentPage={(p) => navigate(`/${p}`)}
+            setSelectedLabType={setSelectedLabType}
+          />
+        );
+      case "/labs":
+        return (
+          <LabsPage
+            setCurrentPage={(p) => navigate(`/${p}`)}
+            selectedLabType={selectedLabType}
+            isAdmin={isAdmin}
+            isInstructor={isInstructor}
+            onEditLab={(lab) => console.log("Edit lab", lab)}
+            onRemoveLab={(lab) => console.log("Remove lab", lab)}
+          />
+        );
+      case "/lab-detail":
+        return <LabDetailPage setCurrentPage={(p) => navigate(`/${p}`)} />;
+      case "/challenge":
+        return <ChallengePage setCurrentPage={(p) => navigate(`/${p}`)} />;
+      case "/comments":
+        return <CommentsPage />;
+      case "/profile":
+        return (
+          <ProfilePage
+            currentUser={currentUser}
+            onRequestRole={handleRoleRequest}
+            onResetPassword={handleProfilePasswordReset}
+            onChangePassword={handleChangePassword}
+            roleRequestStatus={roleRequestStatus}
+            isAdmin={isAdmin}
+            isInstructor={isInstructor}
+            roleRequestMessage={roleRequestMessage}
+            roleRequestLoading={roleRequestLoading}
+          />
+        );
+      case "/admin":
+        if (!isAdmin) {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black pt-32 text-center text-white font-mono">
+              <p className="text-sm text-gray-500">ACCESS_RESTRICTED</p>
+              <h1 className="text-4xl font-bold text-red-400 mt-4">
+                ADMIN_PRIVILEGES_REQUIRED
+              </h1>
+            </div>
+          );
+        }
+        return (
+          <AdminDashboardPage
+            pendingRoleRequests={pendingRoleRequests}
+            overviewStats={adminStats}
+          />
+        );
+      case "/reset-password":
+        return (
+          <ResetPasswordPage
+            token={routeToken}
+            isAuthenticatedReset={!routeToken && resetMode === "profile"}
+            currentUser={currentUser}
+            onBackToLogin={() => navigate("/profile")}
+            onResetSuccess={() => navigate("/home")}
+          />
+        );
+      case "/change-password":
+        return (
+          <ChangePasswordPage
+            currentUser={currentUser}
+            onBackToProfile={() => navigate("/profile")}
+            onPasswordChangeSuccess={() => navigate("/profile")}
+            onForgotPassword={handleForgotPassword}
+          />
+        );
+      default:
+        return <HomePage setCurrentPage={(p) => navigate(`/${p}`)} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen">
+      {!isLoggedIn ? (
+        renderAuthPage()
+      ) : (
+        <>
+          <Navbar
+            setCurrentPage={(p) => navigate(`/${p}`)}
+            onLogout={handleLogoutWithNavigation}
+            currentPage={location.pathname.replace("/", "") || "home"}
+            currentUser={currentUser}
+          />
+          {renderPage()}
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+}
